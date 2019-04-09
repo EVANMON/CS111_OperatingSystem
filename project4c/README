@@ -1,0 +1,27 @@
+# NAME: Zhonglin Zhang
+# EMAIL: evanzhang@ucla.edu
+# ID: 005030520
+
+Project 4C
+
+Include files:
+> lab4c_tcp.c: the source file for TCP connection
+
+> lab4c_tls.c: the source file for SSL connection
+
+> Makefile: for build, generate tarball and clear files
+
+> README: the introduction of the files
+
+To run this program, you must copy the files to the beaglebone board or any other embedded system with Linux system and MRAA library:
+
+make default: build the executable files
+make dist: generate tarball
+make clean: clear the generated files
+
+Resources:
+1. http://man7.org/linux/man-pages/man2/fcntl.2.html
+2. http://wiki.seeedstudio.com/Grove-Temperature_Sensor_V1.2/
+3. http://man7.org/linux/man-pages/man2/poll.2.html
+4. https://iotdk.intel.com/docs/master/mraa/index.html
+5. https://www.thegeekstuff.com/2011/12/c-socket-programming/?utm_source=feedburner

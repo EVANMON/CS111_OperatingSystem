@@ -1,0 +1,11 @@
+# NAME: Zhonglin Zhang
+# EMAIL: evanzhang@ucla.edu
+# ID: 005030520
+
+Project 4a
+Serial Number(S/N): BBGW17100362
+MAC: 2CF7F1066D01
+
+In this project, I connected my BeagleBone to my laptop with USB terminal and Wifi port separately. For Wifi connection, I connected both the BeagleBone and laptop to the hotspot of my mobile phone in order to transfer files from my Mac to the board.
+
+Then by the Wifi port, I built and ran the helloworld.c file on the BeagleBone board with my terminal commands. Then, I installed the git and clone a remote test repository in my Github to the local on the board.

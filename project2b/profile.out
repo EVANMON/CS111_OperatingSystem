@@ -1,0 +1,310 @@
+Total: 389 samples
+     271  69.7%  69.7%      388  99.7% thread_oper
+      73  18.8%  88.4%       73  18.8% SortedList_insert
+      44  11.3%  99.7%       44  11.3% SortedList_lookup
+       1   0.3% 100.0%      389 100.0% __clone
+       0   0.0% 100.0%      388  99.7% start_thread
+ROUTINE ====================== thread_oper in /u/ee/grad/zhonglin/CS111/project2b/lab2_list.c
+   271    388 Total samples (flat / cumulative)
+     .      .   78:     }
+     .      .   79:     key = tmp % sublist_num;
+     .      .   80:     return key;
+     .      .   81: }
+     .      .   82: 
+---
+     .      .   83: void* thread_oper(void* tid) {
+     .      .   84:     unsigned int t_id = *((int*) tid);
+     .      .   85: 	int iter=0;
+     .      .   86: 	int start = t_id * iter_num;
+     .      .   87:     int end = (t_id+1) * iter_num;
+     .      .   88:     int key, i;
+     .      .   89:     struct timespec stime, etime;
+     .      .   90:     long long ltime = 0;
+     .      .   91:     // printf("%s\n", ele_list[iter].key);
+     .      .   92: 	for (iter=start; iter<end; ++iter) {
+     .      .   93:         key = hash_func(&ele_list[iter]);
+     .      .   94: 		switch (opt_sync) {
+     .      .   95: 			case 'm':
+     .      .   96:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .   97: 				pthread_mutex_lock(&mutex_lock[key]);
+     .      .   98:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .   99: 				SortedList_insert(&heads[key], &ele_list[iter]);
+     .      .  100:                 pthread_mutex_unlock(&mutex_lock[key]);
+     .      .  101:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  102:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  103:                 lock_oper++;
+     .      .  104: 				break;
+     .      .  105: 			case 's':
+     .      .  106:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+   131    131  107: 				while (__sync_lock_test_and_set(&spin_lock[key], 1));
+     .      .  108:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .     73  109: 				SortedList_insert(&heads[key], &ele_list[iter]);
+     .      .  110:                 __sync_lock_release(&spin_lock[key]);
+     .      .  111:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  112:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  113:                 lock_oper++;
+     .      .  114: 				break;
+     .      .  115: 			case 'n':
+     .      .  116: 				SortedList_insert(&heads[key], &ele_list[iter]);
+     .      .  117: 				break;
+     .      .  118: 			default:
+     .      .  119: 				fprintf(stderr, "%s\n", "Unknown Sync Method");
+     .      .  120:                 mfree();
+     .      .  121: 				exit(1);
+     .      .  122: 		}
+     .      .  123: 	}
+     .      .  124: 
+     .      .  125:     int list_len=0;
+     .      .  126:     for (i=0; i<sublist_num; ++i) {
+     .      .  127:         switch (opt_sync) {
+     .      .  128:             case 'm':
+     .      .  129:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .  130:                 pthread_mutex_lock(&mutex_lock[i]);
+     .      .  131:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .  132:                 list_len += SortedList_length(&heads[i]);
+     .      .  133:                 pthread_mutex_unlock(&mutex_lock[i]);
+     .      .  134:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  135:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  136:                 lock_oper++;
+     .      .  137:                 break;
+     .      .  138:             case 's':
+     .      .  139:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .  140:                 while (__sync_lock_test_and_set(&spin_lock[i], 1));
+     .      .  141:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .  142:                 list_len += SortedList_length(&heads[i]);
+     .      .  143:                 __sync_lock_release(&spin_lock[i]);
+     .      .  144:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  145:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  146:                 lock_oper++;
+     .      .  147:                 break;
+     .      .  148:             case 'n':
+     .      .  149:                 list_len += SortedList_length(&heads[i]);
+     .      .  150:                 break;
+     .      .  151:             default:
+     .      .  152:                 fprintf(stderr, "%s\n", "Unknown Sync Method");
+     .      .  153:                 mfree();
+     .      .  154:                 exit(1);
+     .      .  155:         }
+     .      .  156:     }
+     .      .  157: 
+     .      .  158:     // printf("%d\n", list_len);
+     .      .  159:     for (iter=start; iter<end; ++iter) {
+     .      .  160:         key = hash_func(&ele_list[iter]);
+     .      .  161:         switch (opt_sync) {
+     .      .  162:             case 'm':
+     .      .  163:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .  164:                 pthread_mutex_lock(&mutex_lock[key]);
+     .      .  165:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .  166:                 if (!SortedList_lookup(&heads[key], ele_list[iter].key)) {
+     .      .  167:                     fprintf(stderr, "%s\n", "Error: Didn't find the element to delete!");
+     .      .  168:                     mfree();
+     .      .  169:                     exit(2);
+     .      .  170:                 }
+     .      .  171:                 if (SortedList_delete(&ele_list[iter]) != 0) {
+     .      .  172:                     fprintf(stderr, "%s\n", "Error on SortedList_delete!");
+     .      .  173:                     mfree();
+     .      .  174:                     exit(2);
+     .      .  175:                 }
+     .      .  176:                 pthread_mutex_unlock(&mutex_lock[key]);
+     .      .  177:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  178:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  179:                 lock_oper++;
+     .      .  180:                 break;
+     .      .  181:             case 's':
+     .      .  182:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+   140    140  183:                 while (__sync_lock_test_and_set(&spin_lock[key], 1));
+     .      .  184:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .     44  185:                 if (!SortedList_lookup(&heads[key], ele_list[iter].key)) {
+     .      .  186:                     fprintf(stderr, "%s\n", "Error: Didn't find the element to delete!");
+     .      .  187:                     mfree();
+     .      .  188:                     exit(2);
+     .      .  189:                 }
+     .      .  190:                 if (SortedList_delete(&ele_list[iter]) != 0) {
+     .      .  191:                     fprintf(stderr, "%s\n", "Error on SortedList_delete!");
+     .      .  192:                     mfree();
+     .      .  193:                     exit(2);
+     .      .  194:                 }
+     .      .  195:                 __sync_lock_release(&spin_lock[key]);
+     .      .  196:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  197:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  198:                 lock_oper++;
+     .      .  199:                 break;
+     .      .  200:             case 'n':
+     .      .  201:                 if (!SortedList_lookup(&heads[key], ele_list[iter].key)) {
+     .      .  202:                     fprintf(stderr, "%s\n", "Error: Didn't find the element to delete!");
+     .      .  203:                     mfree();
+     .      .  204:                     exit(2);
+     .      .  205:                 }
+     .      .  206:                 if (SortedList_delete(&ele_list[iter]) != 0) {
+     .      .  207:                     fprintf(stderr, "%s\n", "Error on SortedList_delete!");
+     .      .  208:                     mfree();
+     .      .  209:                     exit(2);
+     .      .  210:                 }
+     .      .  211:                 break;
+     .      .  212:             default:
+     .      .  213:                 fprintf(stderr, "%s\n", "Unknown Sync Method");
+     .      .  214:                 mfree();
+     .      .  215:                 exit(1);
+     .      .  216:         }
+     .      .  217:     }
+     .      .  218:     ttime_list[t_id] += ltime;
+     .      .  219:     return NULL;
+     .      .  220: }
+---
+     .      .  221: 
+     .      .  222: 
+     .      .  223: int main(int argc, char *argv[]) {
+     .      .  224: 	int i, opt;
+     .      .  225: 	static struct option long_options[] = {
+ROUTINE ====================== thread_oper in /u/ee/grad/zhonglin/CS111/project2b/lab2_list.c
+   271    388 Total samples (flat / cumulative)
+     .      .   78:     }
+     .      .   79:     key = tmp % sublist_num;
+     .      .   80:     return key;
+     .      .   81: }
+     .      .   82: 
+---
+     .      .   83: void* thread_oper(void* tid) {
+     .      .   84:     unsigned int t_id = *((int*) tid);
+     .      .   85: 	int iter=0;
+     .      .   86: 	int start = t_id * iter_num;
+     .      .   87:     int end = (t_id+1) * iter_num;
+     .      .   88:     int key, i;
+     .      .   89:     struct timespec stime, etime;
+     .      .   90:     long long ltime = 0;
+     .      .   91:     // printf("%s\n", ele_list[iter].key);
+     .      .   92: 	for (iter=start; iter<end; ++iter) {
+     .      .   93:         key = hash_func(&ele_list[iter]);
+     .      .   94: 		switch (opt_sync) {
+     .      .   95: 			case 'm':
+     .      .   96:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .   97: 				pthread_mutex_lock(&mutex_lock[key]);
+     .      .   98:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .   99: 				SortedList_insert(&heads[key], &ele_list[iter]);
+     .      .  100:                 pthread_mutex_unlock(&mutex_lock[key]);
+     .      .  101:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  102:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  103:                 lock_oper++;
+     .      .  104: 				break;
+     .      .  105: 			case 's':
+     .      .  106:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+   131    131  107: 				while (__sync_lock_test_and_set(&spin_lock[key], 1));
+     .      .  108:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .     73  109: 				SortedList_insert(&heads[key], &ele_list[iter]);
+     .      .  110:                 __sync_lock_release(&spin_lock[key]);
+     .      .  111:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  112:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  113:                 lock_oper++;
+     .      .  114: 				break;
+     .      .  115: 			case 'n':
+     .      .  116: 				SortedList_insert(&heads[key], &ele_list[iter]);
+     .      .  117: 				break;
+     .      .  118: 			default:
+     .      .  119: 				fprintf(stderr, "%s\n", "Unknown Sync Method");
+     .      .  120:                 mfree();
+     .      .  121: 				exit(1);
+     .      .  122: 		}
+     .      .  123: 	}
+     .      .  124: 
+     .      .  125:     int list_len=0;
+     .      .  126:     for (i=0; i<sublist_num; ++i) {
+     .      .  127:         switch (opt_sync) {
+     .      .  128:             case 'm':
+     .      .  129:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .  130:                 pthread_mutex_lock(&mutex_lock[i]);
+     .      .  131:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .  132:                 list_len += SortedList_length(&heads[i]);
+     .      .  133:                 pthread_mutex_unlock(&mutex_lock[i]);
+     .      .  134:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  135:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  136:                 lock_oper++;
+     .      .  137:                 break;
+     .      .  138:             case 's':
+     .      .  139:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .  140:                 while (__sync_lock_test_and_set(&spin_lock[i], 1));
+     .      .  141:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .  142:                 list_len += SortedList_length(&heads[i]);
+     .      .  143:                 __sync_lock_release(&spin_lock[i]);
+     .      .  144:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  145:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  146:                 lock_oper++;
+     .      .  147:                 break;
+     .      .  148:             case 'n':
+     .      .  149:                 list_len += SortedList_length(&heads[i]);
+     .      .  150:                 break;
+     .      .  151:             default:
+     .      .  152:                 fprintf(stderr, "%s\n", "Unknown Sync Method");
+     .      .  153:                 mfree();
+     .      .  154:                 exit(1);
+     .      .  155:         }
+     .      .  156:     }
+     .      .  157: 
+     .      .  158:     // printf("%d\n", list_len);
+     .      .  159:     for (iter=start; iter<end; ++iter) {
+     .      .  160:         key = hash_func(&ele_list[iter]);
+     .      .  161:         switch (opt_sync) {
+     .      .  162:             case 'm':
+     .      .  163:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+     .      .  164:                 pthread_mutex_lock(&mutex_lock[key]);
+     .      .  165:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .      .  166:                 if (!SortedList_lookup(&heads[key], ele_list[iter].key)) {
+     .      .  167:                     fprintf(stderr, "%s\n", "Error: Didn't find the element to delete!");
+     .      .  168:                     mfree();
+     .      .  169:                     exit(2);
+     .      .  170:                 }
+     .      .  171:                 if (SortedList_delete(&ele_list[iter]) != 0) {
+     .      .  172:                     fprintf(stderr, "%s\n", "Error on SortedList_delete!");
+     .      .  173:                     mfree();
+     .      .  174:                     exit(2);
+     .      .  175:                 }
+     .      .  176:                 pthread_mutex_unlock(&mutex_lock[key]);
+     .      .  177:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  178:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  179:                 lock_oper++;
+     .      .  180:                 break;
+     .      .  181:             case 's':
+     .      .  182:                 clock_gettime(CLOCK_MONOTONIC, &stime);
+   140    140  183:                 while (__sync_lock_test_and_set(&spin_lock[key], 1));
+     .      .  184:                 clock_gettime(CLOCK_MONOTONIC, &etime);
+     .     44  185:                 if (!SortedList_lookup(&heads[key], ele_list[iter].key)) {
+     .      .  186:                     fprintf(stderr, "%s\n", "Error: Didn't find the element to delete!");
+     .      .  187:                     mfree();
+     .      .  188:                     exit(2);
+     .      .  189:                 }
+     .      .  190:                 if (SortedList_delete(&ele_list[iter]) != 0) {
+     .      .  191:                     fprintf(stderr, "%s\n", "Error on SortedList_delete!");
+     .      .  192:                     mfree();
+     .      .  193:                     exit(2);
+     .      .  194:                 }
+     .      .  195:                 __sync_lock_release(&spin_lock[key]);
+     .      .  196:                 ltime += (long long) (etime.tv_sec - stime.tv_sec) * 1000000000 + \
+     .      .  197:                                     (etime.tv_nsec - stime.tv_nsec);
+     .      .  198:                 lock_oper++;
+     .      .  199:                 break;
+     .      .  200:             case 'n':
+     .      .  201:                 if (!SortedList_lookup(&heads[key], ele_list[iter].key)) {
+     .      .  202:                     fprintf(stderr, "%s\n", "Error: Didn't find the element to delete!");
+     .      .  203:                     mfree();
+     .      .  204:                     exit(2);
+     .      .  205:                 }
+     .      .  206:                 if (SortedList_delete(&ele_list[iter]) != 0) {
+     .      .  207:                     fprintf(stderr, "%s\n", "Error on SortedList_delete!");
+     .      .  208:                     mfree();
+     .      .  209:                     exit(2);
+     .      .  210:                 }
+     .      .  211:                 break;
+     .      .  212:             default:
+     .      .  213:                 fprintf(stderr, "%s\n", "Unknown Sync Method");
+     .      .  214:                 mfree();
+     .      .  215:                 exit(1);
+     .      .  216:         }
+     .      .  217:     }
+     .      .  218:     ttime_list[t_id] += ltime;
+     .      .  219:     return NULL;
+     .      .  220: }
+---
+     .      .  221: 
+     .      .  222: 
+     .      .  223: int main(int argc, char *argv[]) {
+     .      .  224: 	int i, opt;
+     .      .  225: 	static struct option long_options[] = {

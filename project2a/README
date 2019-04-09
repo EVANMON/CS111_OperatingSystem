@@ -1,0 +1,40 @@
+# NAME: Zhonglin Zhang
+# EMAIL: evanzhang@ucla.edu
+# ID: 005030520
+
+Project 2A
+
+PART 1
+Q2.1.1 Why does it take many iterations before errors are seen? Why does a significantly smaller number of iterations so seldom fail?
+
+A: Because if the iteration number is small enough, most operations of each thread can be done in the time slice of each thread, which makes the operations seemingly atomic, and so the error is less likely to happen.
+
+Q2.1.2 Why are the --yield runs so much slower? Where is the additional time going?
+Is it possible to get valid per-operation timings if we are using the --yield option? If so, explain how. If not, explain why not.
+
+A: Each time we call a sched_yield, OS will stop the current thread and put it to the end of the thread queue. It has to wait until all the other threads finish their operations and continue to run. And the extra time is spent on the context switch (a large part) and waiting.
+
+Hence, we cannot get the valid per-operation timings. We cannot know the time spent on the context switches and waiting.
+
+Q2.1.3 Why does the average cost per operation drop with increasing iterations?
+If the cost per iteration is a function of the number of iterations, how do we know how many iterations to run (or what the "correct" cost is)? 
+
+A： When we have few iterations, the time on creating new threads is very significant. But as the iteration number increases, the creating time is shared by multiple operations so that the average cost per operation drops.
+Hence, when the iteration is large enough, the average cost will converge to a stable value. Then according to the total time and average time, we can deduce the iteration number.
+
+Q2.1.4 Why do all of the options perform similarly for low numbers of threads? Why do the three protected operations slow down as the number of threads rises?
+
+A: For low numbers of threads, the race condition is not notable. Many operations in one thread can even be finished without switching threads. So all methods perform similarly. 
+However, as the number of threads rises, the thread switching becomes more frequent. So protected operations need to take more time to remain operation sequence to guarantee the correctness of operations.
+
+Q2.2.1 Compare the variation in time per mutex-protected operation vs the number of threads in Part-1 (adds) and Part-2 (sorted lists).
+Comment on the general shapes of the curves, and explain why they have this shape.
+Comment on the relative rates of increase and differences in the shapes of the curves, and offer an explanation for these differences.
+
+A: The general shape of the two curves is that they both increase gradually and become more and more stable. The reason is as iteration number rises, the total time is roughly proportional to the operation number.
+The add operation in SortedList is more expensive than that for simple counter because for SortedList, the lock is more complex and there are more race conditions. So the average operation is more expensive.
+
+Q2.2.2 Compare the variation in time per protected operation vs the number of threads for list operations protected by Mutex vs Spin locks. Comment on the general shapes of the curves, and explain why they have this shape.
+Comment on the relative rates of increase and differences in the shapes of the curves, and offer an explanation for these differences.
+
+They both increase stably because they share the similar lock methods. The difference is that for the beginning, spin-lock takes less time while spin-lock also has a larger increase rate. Hence, spin-lock ends up with a larger time-costing compared with mutex. Because spin-lock needs to use much more CPU so that waste the time.
